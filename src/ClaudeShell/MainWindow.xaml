@@ -126,7 +126,7 @@
             <TextBlock Grid.Row="2"
                        Foreground="#7A7A7A"
                        FontSize="12"
-                       Text="Enter: Explorer   Ctrl+Enter: Terminal   Shift+Enter: claude --continue   Esc: close" />
+                       Text="Enter: Explorer   Shift+Enter: Claude   Esc: close" />
         </Grid>
     </Border>
 </Window>

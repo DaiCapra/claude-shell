@@ -4,7 +4,5 @@ public interface IProjectLauncher
 {
     void OpenInExplorer(string path);
 
-    void OpenInTerminal(string path);
-
-    void ContinueClaude(string path);
+    void OpenClaude(string path);
 }

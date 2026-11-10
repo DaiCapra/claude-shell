@@ -229,12 +229,10 @@ public class MainViewModelTests
         var viewModel = Create(@"C:\a\one");
 
         viewModel.OpenInExplorer();
-        viewModel.OpenInTerminal();
-        viewModel.ContinueClaude();
+        viewModel.OpenClaude();
 
         _launcher.Received(1).OpenInExplorer(@"C:\a\one");
-        _launcher.Received(1).OpenInTerminal(@"C:\a\one");
-        _launcher.Received(1).ContinueClaude(@"C:\a\one");
+        _launcher.Received(1).OpenClaude(@"C:\a\one");
     }
 
     [Fact]
@@ -243,11 +241,9 @@ public class MainViewModelTests
         var viewModel = Create();
 
         viewModel.OpenInExplorer();
-        viewModel.OpenInTerminal();
-        viewModel.ContinueClaude();
+        viewModel.OpenClaude();
 
         _launcher.DidNotReceiveWithAnyArgs().OpenInExplorer(default!);
-        _launcher.DidNotReceiveWithAnyArgs().OpenInTerminal(default!);
-        _launcher.DidNotReceiveWithAnyArgs().ContinueClaude(default!);
+        _launcher.DidNotReceiveWithAnyArgs().OpenClaude(default!);
     }
 }

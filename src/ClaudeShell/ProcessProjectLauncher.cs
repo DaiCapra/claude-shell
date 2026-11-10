@@ -8,19 +8,11 @@ public class ProcessProjectLauncher : IProjectLauncher
     public void OpenInExplorer(string path) =>
         Start("explorer.exe", [path]);
 
-    public void OpenInTerminal(string path)
+    public void OpenClaude(string path)
     {
-        if (!TryStart("wt.exe", ["-d", path]))
+        if (!TryStart("wt.exe", ["-d", path, "cmd.exe", "/k", "claude"]))
         {
-            StartInFolder("cmd.exe", path, ["/k"]);
-        }
-    }
-
-    public void ContinueClaude(string path)
-    {
-        if (!TryStart("wt.exe", ["-d", path, "powershell.exe", "-NoExit", "-Command", "claude --continue"]))
-        {
-            StartInFolder("cmd.exe", path, ["/k", "claude --continue"]);
+            StartInFolder("cmd.exe", path, ["/k", "claude"]);
         }
     }
 

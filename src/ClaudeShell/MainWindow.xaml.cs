@@ -1,6 +1,9 @@
 ﻿using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace ClaudeShell;
 
@@ -26,16 +29,66 @@ public partial class MainWindow : Window
 
     public bool AllowClose { get; set; }
 
-    public void ShowPopup()
+    // Deferred so a tray menu (or the taskbar) finishes taking back focus
+    // first; otherwise its focus change deactivates and hides the popup.
+    public void ShowPopup() =>
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, ShowNow);
+
+    void ShowNow()
     {
         _viewModel.Filter = "";
         _viewModel.Refresh();
 
         Show();
+        ForceForeground();
         Activate();
         FilterBox.Focus();
         FilterBox.SelectAll();
     }
+
+    // Windows refuses SetForegroundWindow from background apps. Attaching to
+    // the current foreground thread's input lets us take focus anyway.
+    void ForceForeground()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var foreground = GetForegroundWindow();
+
+        if (foreground == handle)
+        {
+            return;
+        }
+
+        var foregroundThread = GetWindowThreadProcessId(foreground, IntPtr.Zero);
+        var thisThread = GetCurrentThreadId();
+        var attached = foregroundThread != thisThread &&
+            AttachThreadInput(foregroundThread, thisThread, true);
+
+        SetForegroundWindow(handle);
+        BringWindowToTop(handle);
+
+        if (attached)
+        {
+            AttachThreadInput(foregroundThread, thisThread, false);
+        }
+    }
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+    [DllImport("kernel32.dll")]
+    static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
+
+    [DllImport("user32.dll")]
+    static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    static extern bool BringWindowToTop(IntPtr hWnd);
 
     protected override void OnDeactivated(EventArgs e)
     {
@@ -89,13 +142,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (modifiers.HasFlag(ModifierKeys.Control))
+        if (modifiers.HasFlag(ModifierKeys.Shift))
         {
-            _viewModel.OpenInTerminal();
-        }
-        else if (modifiers.HasFlag(ModifierKeys.Shift))
-        {
-            _viewModel.ContinueClaude();
+            _viewModel.OpenClaude();
         }
         else
         {

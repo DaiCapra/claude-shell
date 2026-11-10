@@ -121,9 +121,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void OpenInExplorer() => Launch(_launcher.OpenInExplorer);
 
-    public void OpenInTerminal() => Launch(_launcher.OpenInTerminal);
-
-    public void ContinueClaude() => Launch(_launcher.ContinueClaude);
+    public void OpenClaude() => Launch(_launcher.OpenClaude);
 
     void Launch(Action<string> action)
     {
