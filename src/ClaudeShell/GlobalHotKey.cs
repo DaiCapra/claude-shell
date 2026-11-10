@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
 namespace ClaudeShell;
@@ -31,6 +31,15 @@ public sealed class GlobalHotKey : IDisposable
 
         _registered = RegisterHotKey(_handle, Id, modifiers | NoRepeat, key);
 
+        if (_registered)
+        {
+            Log.Info($"Hotkey registered (modifiers=0x{modifiers:X}, vk=0x{key:X}).");
+        }
+        else
+        {
+            Log.Warn($"Hotkey registration failed (modifiers=0x{modifiers:X}, vk=0x{key:X}, error={Marshal.GetLastWin32Error()}).");
+        }
+
         return _registered;
     }
 
@@ -40,6 +49,7 @@ public sealed class GlobalHotKey : IDisposable
         {
             UnregisterHotKey(_handle, Id);
             _registered = false;
+            Log.Info("Hotkey unregistered.");
         }
     }
 
@@ -54,6 +64,7 @@ public sealed class GlobalHotKey : IDisposable
         if (msg == WmHotKey && wParam.ToInt32() == Id)
         {
             handled = true;
+            Log.Info("Hotkey pressed.");
             _pressed();
         }
 

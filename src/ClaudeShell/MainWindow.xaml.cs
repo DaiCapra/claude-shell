@@ -31,19 +31,62 @@ public partial class MainWindow : Window
 
     // Deferred so a tray menu (or the taskbar) finishes taking back focus
     // first; otherwise its focus change deactivates and hides the popup.
-    public void ShowPopup() =>
+    public void ShowPopup(string source)
+    {
+        Log.Info($"Open requested ({source}).");
         Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, ShowNow);
+    }
 
     void ShowNow()
     {
-        _viewModel.Filter = "";
-        _viewModel.Refresh();
+        try
+        {
+            _viewModel.Filter = "";
+            _viewModel.Refresh();
 
-        Show();
-        ForceForeground();
-        Activate();
-        FilterBox.Focus();
-        FilterBox.SelectAll();
+            Show();
+            CenterOnCursorScreen();
+            ForceForeground();
+            var activated = Activate();
+            FilterBox.Focus();
+            FilterBox.SelectAll();
+
+            var handle = new WindowInteropHelper(this).Handle;
+            GetWindowRect(handle, out var rect);
+            Log.Info(
+                $"Shown: visible={IsVisible}, activated={activated}, active={IsActive}, " +
+                $"foregroundIsUs={GetForegroundWindow() == handle}, " +
+                $"rect=({rect.Left},{rect.Top})-({rect.Right},{rect.Bottom}), projects={_viewModel.Projects.Count}.");
+        }
+        catch (Exception e)
+        {
+            Log.Error("Showing the popup failed.", e);
+        }
+    }
+
+    // CenterScreen only applies on the first Show. Re-center every time on
+    // the monitor under the cursor, so a monitor change while hidden can't
+    // leave the popup off-screen.
+    void CenterOnCursorScreen()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var area = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position).WorkingArea;
+
+        if (!GetWindowRect(handle, out var rect))
+        {
+            Log.Warn($"GetWindowRect failed (error={Marshal.GetLastWin32Error()}).");
+            return;
+        }
+
+        var width = rect.Right - rect.Left;
+        var height = rect.Bottom - rect.Top;
+        var x = area.Left + Math.Max(0, (area.Width - width) / 2);
+        var y = area.Top + Math.Max(0, (area.Height - height) / 2);
+
+        if (!SetWindowPos(handle, IntPtr.Zero, x, y, 0, 0, SwpNoSize | SwpNoZOrder | SwpNoActivate))
+        {
+            Log.Warn($"SetWindowPos failed (error={Marshal.GetLastWin32Error()}).");
+        }
     }
 
     // Windows refuses SetForegroundWindow from background apps. Attaching to
@@ -60,17 +103,37 @@ public partial class MainWindow : Window
 
         var foregroundThread = GetWindowThreadProcessId(foreground, IntPtr.Zero);
         var thisThread = GetCurrentThreadId();
-        var attached = foregroundThread != thisThread &&
+        var attached = foregroundThread != 0 && foregroundThread != thisThread &&
             AttachThreadInput(foregroundThread, thisThread, true);
 
-        SetForegroundWindow(handle);
+        var setForeground = SetForegroundWindow(handle);
         BringWindowToTop(handle);
 
         if (attached)
         {
             AttachThreadInput(foregroundThread, thisThread, false);
         }
+
+        Log.Info(
+            $"ForceForeground: previous=0x{foreground:X}, thread={foregroundThread}, " +
+            $"attached={attached}, setForeground={setForeground}.");
     }
+
+    const uint SwpNoSize = 0x0001;
+    const uint SwpNoZOrder = 0x0004;
+    const uint SwpNoActivate = 0x0010;
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct Rect
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
 
     [DllImport("user32.dll")]
     static extern IntPtr GetForegroundWindow();
@@ -93,6 +156,7 @@ public partial class MainWindow : Window
     protected override void OnDeactivated(EventArgs e)
     {
         base.OnDeactivated(e);
+        Log.Info("Deactivated, hiding.");
         Hide();
     }
 

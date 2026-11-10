@@ -23,14 +23,22 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        DispatcherUnhandledException += (_, args) => Log.Error("Unhandled UI exception.", args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            Log.Error("Unhandled exception.", args.ExceptionObject as Exception);
+
         _mutex = new Mutex(true, MutexName, out var isFirst);
 
         if (!isFirst)
         {
+            Log.Info("Another instance is already running, exiting.");
             Shutdown();
 
             return;
         }
+
+        Log.Info($"Started (version {typeof(App).Assembly.GetName().Version}, pid {Environment.ProcessId}).");
+        WatchSystemEvents();
 
         _settings = _store.Load();
 
@@ -57,7 +65,7 @@ public partial class App : Application
 
         var handle = new WindowInteropHelper(_window).EnsureHandle();
 
-        _hotKey = new GlobalHotKey(handle, () => _window.ShowPopup());
+        _hotKey = new GlobalHotKey(handle, () => _window.ShowPopup("hotkey"));
 
         _tray = CreateTray();
 
@@ -71,8 +79,20 @@ public partial class App : Application
         }
     }
 
+    // Monitor, power and session changes are the usual suspects when the
+    // popup stops appearing after a long run, so record them.
+    static void WatchSystemEvents()
+    {
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) =>
+            Log.Info($"Display settings changed: {string.Join(", ", System.Windows.Forms.Screen.AllScreens.Select(s => s.Bounds))}.");
+        Microsoft.Win32.SystemEvents.PowerModeChanged += (_, args) => Log.Info($"Power mode changed: {args.Mode}.");
+        Microsoft.Win32.SystemEvents.SessionSwitch += (_, args) => Log.Info($"Session switch: {args.Reason}.");
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
+        Log.Info($"Exiting (code {e.ApplicationExitCode}).");
+
         _hotKey?.Dispose();
 
         if (_tray is not null)
@@ -134,7 +154,7 @@ public partial class App : Application
     System.Windows.Forms.NotifyIcon CreateTray()
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
-        menu.Items.Add("Open", null, (_, _) => _window?.ShowPopup());
+        menu.Items.Add("Open", null, (_, _) => _window?.ShowPopup("tray menu"));
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
         menu.Items.Add("Quit", null, (_, _) => Quit());
 
@@ -150,7 +170,7 @@ public partial class App : Application
         {
             if (args.Button == System.Windows.Forms.MouseButtons.Left)
             {
-                _window?.ShowPopup();
+                _window?.ShowPopup("tray click");
             }
         };
 
