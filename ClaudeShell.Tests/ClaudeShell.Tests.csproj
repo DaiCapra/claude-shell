@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ClaudeShell\ClaudeShell.csproj" />
+    <ProjectReference Include="..\ClaudeShell\ClaudeShell.csproj" />
   </ItemGroup>
 
 </Project>

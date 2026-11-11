@@ -2,7 +2,7 @@
 
 ## Lucide
 
-The app icon (`src/ClaudeShell/Assets/folder-clock.svg`, rendered to `icon.ico`) is the `folder-clock` icon from [Lucide](https://github.com/lucide-icons/lucide).
+The app icon (`ClaudeShell/Assets/folder-clock.svg`, rendered to `icon.ico`) is the `folder-clock` icon from [Lucide](https://github.com/lucide-icons/lucide).
 
 ```
 ISC License

@@ -25,4 +25,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - run: dotnet test tests/ClaudeShell.Tests/ClaudeShell.Tests.csproj --configuration Release --logger "console;verbosity=normal"
+      - run: dotnet test ClaudeShell.Tests/ClaudeShell.Tests.csproj --configuration Release --logger "console;verbosity=normal"
