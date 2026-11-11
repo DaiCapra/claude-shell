@@ -8,6 +8,10 @@ namespace ClaudeShell;
 public partial class App : Application
 {
     const string MutexName = "ClaudeShell.SingleInstance";
+    static readonly IntPtr PerMonitorAwareV2 = new(-4);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern bool SetProcessDpiAwarenessContext(IntPtr value);
 
     readonly SettingsStore _store = new();
     readonly IProjectLauncher _launcher = new ProcessProjectLauncher();
@@ -22,6 +26,12 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Must run before any window exists. Without it the process is DPI
+        // unaware, so screen bounds, cursor and window rects are in different
+        // coordinate spaces on monitors with different scaling, and the popup
+        // lands on the wrong screen.
+        SetProcessDpiAwarenessContext(PerMonitorAwareV2);
 
         DispatcherUnhandledException += (_, args) => Log.Error("Unhandled UI exception.", args.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
